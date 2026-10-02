@@ -1,0 +1,11 @@
+---
+# Default variables for the common role
+
+# Non-root user that will be used for administration
+admin_user: taiga-admin
+
+# Whether to install unattended-upgrades for automatic security patches
+enable_unattended_upgrades: true
+
+# Timezone for the server
+server_timezone: Europe/Berlin

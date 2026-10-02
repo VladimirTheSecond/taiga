@@ -1,0 +1,21 @@
+---
+# Default variables for the docker role
+
+# Docker packages to install from the official repository
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Users to add to the docker group (can run docker without sudo)
+docker_users:
+  - "{{ admin_user }}"
+
+# Docker daemon configuration
+docker_daemon_config:
+  log-driver: journald
+  log-opts:
+    tag: "{{ '{{.Name}}' }}"
+  live-restore: true

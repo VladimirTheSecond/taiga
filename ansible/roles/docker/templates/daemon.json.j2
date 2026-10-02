@@ -1,0 +1,7 @@
+{
+  "log-driver": "{{ docker_daemon_config['log-driver'] }}",
+  "log-opts": {
+    "tag": "{{ docker_daemon_config['log-opts']['tag'] }}"
+  },
+  "live-restore": {{ docker_daemon_config['live-restore'] | lower }}
+}

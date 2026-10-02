@@ -1,0 +1,9 @@
+---
+# Main playbook for the Taiga server
+
+- name: Configure Taiga server
+  hosts: taiga
+  become: true
+  roles:
+    - common
+    - docker
