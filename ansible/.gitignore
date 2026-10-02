@@ -1,0 +1,29 @@
+# Ansible inventory with real server IPs and credentials
+inventory/hosts.ini
+inventory/*.ini
+!inventory/*.example
+
+# Ansible Vault password files
+vault-password.txt
+.vault_pass
+*.vault_pass
+
+# Ansible retry files (created when a playbook fails)
+*.retry
+
+# Logs from ansible-playbook runs
+*.log
+logs/
+
+# Local facts gathered from remote hosts
+*.fact
+facts/
+
+# Temporary files created during playbook execution
+*.tmp
+*.bak
+*~
+
+# Python virtualenvs used for Ansible development
+venv/
+.venv/
