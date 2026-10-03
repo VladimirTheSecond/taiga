@@ -44,15 +44,16 @@
     mode: "0644"
 
 - name: Add Docker APT repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [arch={{ docker_apt_arch.stdout }}
-      signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/ubuntu
-      {{ ansible_distribution_release }} stable
-    filename: docker
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_distribution_release }}"
+    components: stable
+    architectures: "{{ docker_apt_arch.stdout }}"
+    signed_by: /etc/apt/keyrings/docker.asc
     state: present
-    update_cache: true
+    enabled: true
 
 - name: Install Docker CE packages
   ansible.builtin.apt:

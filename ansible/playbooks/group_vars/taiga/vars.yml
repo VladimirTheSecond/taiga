@@ -9,3 +9,4 @@ taiga_db_name: "taiga"
 taiga_db_user: "taiga"
 enable_ssl: false                       # true, after aws support fixes an issue with domain
 letsencrypt_email: "ulasovetsvladimir@gmail.com"
+
