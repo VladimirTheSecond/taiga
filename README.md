@@ -15,3 +15,10 @@ Self-hosted [Taiga](https://www.taiga.io/) Kanban board deployed on AWS using Te
 ## Repository structure
 
 ...
+
+Prerequisites:  
+- ansible installed  
+- ansible-galaxy collection install community.docker community.general
+- terraform installed  
+- terraform aws plugin  
+
