@@ -7,6 +7,7 @@ inventory/*.ini
 vault-password.txt
 .vault_pass
 *.vault_pass
+group_vars/**/vault.yml
 
 # Ansible retry files (created when a playbook fails)
 *.retry

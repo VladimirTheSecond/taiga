@@ -1,0 +1,11 @@
+---
+# Non-secret configuration for the Taiga deployment
+
+taiga_domain: "ulasovets.de"       # my domain (to be done after aws support wiull fix an issue with domain)
+taiga_sites_scheme: "http"             # "https" to enable SSL
+taiga_admin_email: "ulasovetsvladimir@gmail.com"
+taiga_admin_username: "admin"
+taiga_db_name: "taiga"
+taiga_db_user: "taiga"
+enable_ssl: false                       # true, after aws support fixes an issue with domain
+letsencrypt_email: "ulasovetsvladimir@gmail.com"
