@@ -2,7 +2,7 @@
 # Default variables for the taiga role
 
 taiga_install_dir: /opt/taiga
-taiga_version: "6.8.2"
+taiga_version: "6.9.0"
 taiga_gateway_port: 9000
 taiga_docker_network: taiga-net
 
