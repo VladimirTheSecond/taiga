@@ -8,6 +8,8 @@ x-environment: &default-environment
   TAIGA_SITES_DOMAIN: "{{ taiga_domain }}"
   TAIGA_URL: "{{ taiga_sites_scheme }}://{{ taiga_domain }}"
   TAIGA_WEBSOCKETS_URL: "{{ 'wss' if taiga_sites_scheme == 'https' else 'ws' }}://{{ taiga_domain }}"
+  POSTGRES_HOST: "taiga-db"
+  POSTGRES_PORT: "5432"
   POSTGRES_DB: "{{ taiga_db_name }}"
   POSTGRES_USER: "{{ taiga_db_user }}"
   POSTGRES_PASSWORD: "{{ taiga_db_password }}"
