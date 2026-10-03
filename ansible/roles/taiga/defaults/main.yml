@@ -1,0 +1,22 @@
+---
+# Default variables for the taiga role
+
+taiga_install_dir: /opt/taiga
+taiga_version: "6.8.2"
+taiga_gateway_port: 9000
+taiga_docker_network: taiga-net
+
+# Database
+taiga_db_name: "taiga"
+taiga_db_user: "taiga"
+
+# Secret key (overridden by vault)
+taiga_secret_key: "{{ vault_taiga_secret_key }}"
+taiga_db_password: "{{ vault_taiga_db_password }}"
+taiga_admin_password: "{{ vault_taiga_admin_password }}"
+
+# Admin user auto-creation
+taiga_create_admin: true
+
+# SSL
+enable_ssl: false

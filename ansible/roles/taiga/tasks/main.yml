@@ -1,0 +1,8 @@
+---
+# Deploy Taiga Kanban on the server
+
+- name: Deploy Taiga application
+  ansible.builtin.include_tasks: deploy.yml
+
+- name: Configure Nginx reverse proxy and SSL
+  ansible.builtin.include_tasks: nginx.yml

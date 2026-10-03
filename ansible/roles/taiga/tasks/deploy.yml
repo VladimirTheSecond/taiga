@@ -1,0 +1,63 @@
+---
+# Deploy Taiga via Docker Compose
+
+- name: Create Taiga install directory
+  ansible.builtin.file:
+    path: "{{ taiga_install_dir }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ taiga_install_dir }}/docker-compose.yml"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0640"
+  notify: Restart taiga
+
+- name: Render .env file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ taiga_install_dir }}/.env"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0640"
+  notify: Restart taiga
+
+- name: Pull Taiga Docker images
+  community.docker.docker_compose_v2:
+    project_src: "{{ taiga_install_dir }}"
+    pull: always
+    state: present
+  become_user: "{{ admin_user }}"
+  register: taiga_pull
+
+- name: Run Taiga database migrations
+  community.docker.docker_compose_v2:
+    project_src: "{{ taiga_install_dir }}"
+    profiles:
+      - init
+    state: present
+  become_user: "{{ admin_user }}"
+  register: taiga_init
+
+- name: Start Taiga services
+  community.docker.docker_compose_v2:
+    project_src: "{{ taiga_install_dir }}"
+    state: present
+  become_user: "{{ admin_user }}"
+  register: taiga_up
+
+- name: Wait for Taiga backend to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ taiga_gateway_port }}/api/v1/"
+    status_code: [200, 401, 403]
+    timeout: 5
+  register: taiga_health
+  retries: 30
+  delay: 10
+  until: taiga_health.status in [200, 401, 403]
+  changed_when: false
