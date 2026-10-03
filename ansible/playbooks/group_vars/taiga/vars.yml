@@ -1,7 +1,7 @@
 ---
 # Non-secret configuration for the Taiga deployment
 
-taiga_domain: "ulasovets.de"
+taiga_domain: "{{ ansible_host }}"
 taiga_sites_scheme: "http"
 taiga_admin_email: "ulasovetsvladimir@gmail.com"
 taiga_admin_username: "admin"
