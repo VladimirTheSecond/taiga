@@ -1,0 +1,58 @@
+upstream taiga-back {
+    server 127.0.0.1:8000;
+}
+
+upstream taiga-front {
+    server 127.0.0.1:8001;
+}
+
+upstream taiga-events {
+    server 127.0.0.1:8888;
+}
+
+server {
+    listen 80;
+    server_name {{ taiga_domain }};
+
+    client_max_body_size 100M;
+
+    # Static and media files are served by taiga-back
+    location /media/ {
+        proxy_pass http://taiga-back;
+    }
+
+    location /static/ {
+        proxy_pass http://taiga-back;
+    }
+
+    # API and admin go to the backend
+    location /api/ {
+        proxy_pass http://taiga-back;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /admin/ {
+        proxy_pass http://taiga-back;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # WebSocket events
+    location /events {
+        proxy_pass http://taiga-events;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+
+    # Everything else goes to the frontend
+    location / {
+        proxy_pass http://taiga-front;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

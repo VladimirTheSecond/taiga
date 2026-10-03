@@ -1,0 +1,115 @@
+---
+# Taiga Docker Compose stack
+# Based on https://github.com/kaleidos-ventures/taiga-docker
+
+x-environment: &default-environment
+  TAIGA_SECRET_KEY: "{{ taiga_secret_key }}"
+  TAIGA_SITES_SCHEME: "{{ taiga_sites_scheme }}"
+  TAIGA_SITES_DOMAIN: "{{ taiga_domain }}"
+  TAIGA_URL: "{{ taiga_sites_scheme }}://{{ taiga_domain }}"
+  TAIGA_WEBSOCKETS_URL: "wss://{{ taiga_domain }}"
+  POSTGRES_DB: "{{ taiga_db_name }}"
+  POSTGRES_USER: "{{ taiga_db_user }}"
+  POSTGRES_PASSWORD: "{{ taiga_db_password }}"
+  DATABASE_URL: "postgres://{{ taiga_db_user }}:{{ taiga_db_password }}@taiga-db:5432/{{ taiga_db_name }}"
+
+services:
+  taiga-db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: "{{ taiga_db_name }}"
+      POSTGRES_USER: "{{ taiga_db_user }}"
+      POSTGRES_PASSWORD: "{{ taiga_db_password }}"
+    volumes:
+      - taiga-db-data:/var/lib/postgresql/data
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-back:
+    image: taigaio/taiga-back:{{ taiga_version }}
+    environment:
+      <<: *default-environment
+    depends_on:
+      - taiga-db
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-async:
+    image: taigaio/taiga-back:{{ taiga_version }}
+    entrypoint: ["/taiga-back/docker/async_entrypoint.sh"]
+    environment:
+      <<: *default-environment
+    depends_on:
+      - taiga-db
+      - taiga-async-rabbitmq
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-async-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "{{ taiga_secret_key }}"
+      RABBITMQ_DEFAULT_USER: "taiga"
+      RABBITMQ_DEFAULT_PASS: "{{ taiga_db_password }}"
+      RABBITMQ_DEFAULT_VHOST: "taiga"
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-front:
+    image: taigaio/taiga-front:{{ taiga_version }}
+    environment:
+      TAIGA_URL: "{{ taiga_sites_scheme }}://{{ taiga_domain }}"
+      TAIGA_WEBSOCKETS_URL: "wss://{{ taiga_domain }}"
+      TAIGA_SUBPATH: ""
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-events:
+    image: taigaio/taiga-events:{{ taiga_version }}
+    environment:
+      RABBITMQ_USER: "taiga"
+      RABBITMQ_PASS: "{{ taiga_db_password }}"
+      RABBITMQ_VHOST: "taiga"
+      TAIGA_SECRET_KEY: "{{ taiga_secret_key }}"
+    depends_on:
+      - taiga-events-rabbitmq
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-events-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "{{ taiga_secret_key }}"
+      RABBITMQ_DEFAULT_USER: "taiga"
+      RABBITMQ_DEFAULT_PASS: "{{ taiga_db_password }}"
+      RABBITMQ_DEFAULT_VHOST: "taiga"
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+  taiga-protected:
+    image: taigaio/taiga-protected:{{ taiga_version }}
+    environment:
+      MAX_AGE: "360"
+      SECRET_KEY: "{{ taiga_secret_key }}"
+    networks:
+      - taiga-net
+    restart: unless-stopped
+
+volumes:
+  taiga-db-data:
+    driver: local
+
+networks:
+  taiga-net:
+    driver: bridge
+
+ports:
+  - "127.0.0.1:8001:80"    # taiga-front
+  - "127.0.0.1:8000:8000"  # taiga-back

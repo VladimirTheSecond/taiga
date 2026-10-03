@@ -1,0 +1,52 @@
+---
+# Configure Nginx as reverse proxy for Taiga
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Install Certbot and Nginx plugin (if SSL enabled)
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+  when: enable_ssl
+
+- name: Render Nginx site config
+  ansible.builtin.template:
+    src: nginx-taiga.conf.j2
+    dest: /etc/nginx/sites-available/taiga
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable Taiga site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/taiga
+    dest: /etc/nginx/sites-enabled/taiga
+    state: link
+  notify: Reload nginx
+
+- name: Remove default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Ensure Nginx is running
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Obtain Let's Encrypt certificate
+  ansible.builtin.command: >-
+    certbot --nginx -d {{ taiga_domain }}
+    --non-interactive --agree-tos
+    --email {{ letsencrypt_email }}
+    --redirect
+  args:
+    creates: /etc/letsencrypt/live/{{ taiga_domain }}/fullchain.pem
+  when: enable_ssl
+  notify: Reload nginx

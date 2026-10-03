@@ -1,0 +1,13 @@
+---
+# Handlers for the taiga role
+
+- name: Restart taiga
+  community.docker.docker_compose_v2:
+    project_src: "{{ taiga_install_dir }}"
+    state: restarted
+  become_user: "{{ admin_user }}"
+
+- name: Reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
