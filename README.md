@@ -122,11 +122,13 @@ Nginx runs on the host instead of the official `taiga-gateway` container, for fu
 | `taiga-async` | `taigaio/taiga-back:6.9.0` | — | Celery workers: e-mails, imports, exports, webhooks |
 | `taiga-events` | `taigaio/taiga-events:6.9.0` | `127.0.0.1:8888` | WebSocket live updates, `/events` |
 | `taiga-protected` | `taigaio/taiga-protected:6.9.0` | `127.0.0.1:8003` | Signed URLs for attachments |
-| `taiga-db` | `postgres:14` | Docker network only | Database (volume `taiga-db-data`) |
+| `taiga-db` | `postgres:14` | Docker network only | Database (named volume `taiga-db-data`) |
 | `taiga-async-rabbitmq` | `rabbitmq:3.13` | Docker network only | Broker for Celery |
 | `taiga-events-rabbitmq` | `rabbitmq:3.13` | Docker network only | Broker for live events |
 
 Inside Docker, containers reach the database by its Compose service name `taiga-db`, not `localhost`.
+
+**Files:** uploads (`/opt/taiga/media`) and Django static files (`/opt/taiga/static`) are bind-mounted from the host into `taiga-back` and `taiga-async`. Nginx serves static files directly. Media requests go to `taiga-protected`, which checks the signed token and answers with `X-Accel-Redirect: /_protected/<path>`; Nginx then serves the file from an `internal` location that clients cannot open directly.
 
 ## Security
 
@@ -232,6 +234,7 @@ After `make up`, log in at `https://taiga.vladimirulasovets.de` as `admin` with 
 | Staging CA by default | Always production | Production allows 5 identical certificates per week |
 | `StrictHostKeyChecking=accept-new` | `no`, or managing known_hosts | New host key on every rebuild; `accept-new` still rejects a *changed* key for a known host |
 | Admin user via Django shell + stdin | `createsuperuser` with env var | The env var ends up in `docker exec --env` and the process list; `createsuperuser` exited non-zero even on success |
+| Media and static on host bind mounts | Named Docker volumes, S3 storage backend | Host Nginx can read them (it cannot traverse `/var/lib/docker`); uploads survive container recreation; one directory to back up in step 2 |
 | Docker CE from the official repo | Ubuntu `docker.io` | Current versions and the Compose v2 plugin |
 
 ## Cost
@@ -252,9 +255,9 @@ The monthly AWS budget is 23 USD (~20 EUR) with e-mail alerts at 80 % and 100 %.
 ## Known issues and limitations
 
 - **No backups:** `make down` deletes the database and all uploads. → Roadmap step 2.
-- **`taiga-async` crash-loops:** `RABBITMQ_USER` / `RABBITMQ_PASS` are missing from the Compose environment, so Celery and the events push log in to RabbitMQ as `None`. Background jobs (e-mails, imports, exports) and live updates do not work.
-- **Attachments and Django static files are not served:** `/media/` and `/static/` return 404. The official setup serves them from shared volumes (media through `taiga-protected`); our Compose file has no such volumes, so uploads also live only inside the `taiga-back` container.
 - `taiga-events` writes JWT access tokens to its log (upstream default).
+- A change to the Compose file restarts the Taiga containers twice (`state: present` already recreates them, then the `Restart taiga` handler restarts them again). Harmless, a few seconds of 502s.
+- RabbitMQ reuses the database password instead of its own vault secret.
 - The bootstrap stack keeps its state locally (can be migrated into the bucket with `terraform init -migrate-state`).
 - Single instance, single availability zone, no monitoring.
 
