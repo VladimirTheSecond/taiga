@@ -89,6 +89,6 @@
   become_user: "{{ admin_user }}"
   register: taiga_admin
   changed_when: "'admin: created' in taiga_admin.stdout"
-  failed_when: taiga_admin.rc != 0 or 'admin: ' not in taiga_admin.stdout
+  failed_when: "taiga_admin.rc != 0 or 'admin: ' not in taiga_admin.stdout"
   no_log: true
   when: taiga_create_admin
