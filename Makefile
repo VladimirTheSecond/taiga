@@ -21,6 +21,11 @@ VAULT_PASS_FILE ?= $(HOME)/.ansible/taiga-vault-pass
 VAULT_ARGS  := $(if $(wildcard $(VAULT_PASS_FILE)),--vault-password-file $(VAULT_PASS_FILE),--ask-vault-pass)
 # -k only for staging: its root CA is not in any trust store.
 CURL        := curl -s -o /dev/null $(if $(filter true,$(STAGING)),-k)
+# check connects to the IP from Terraform, not via the local resolver: right after a rebuild
+# macOS may still cache NXDOMAIN for the name (Route 53 negative TTL = 900 s).
+IP           = $(shell $(TF) output -raw server_public_ip 2>/dev/null)
+RESOLVE      = --resolve $(DOMAIN):80:$(IP) --resolve $(DOMAIN):443:$(IP)
+ZONE_NS     := $(shell dig +short NS $(patsubst taiga.%,%,$(DOMAIN)) | head -1)
 
 .PHONY: help deps up timed-up infra configure check down
 
@@ -48,12 +53,14 @@ configure: ## Run the Ansible playbook against the generated inventory
 	ssh-keygen -R "$$($(TF) output -raw server_public_ip)" >/dev/null 2>&1 || true
 	cd ansible && ansible-playbook playbooks/site.yml $(VAULT_ARGS) -e '{"letsencrypt_staging": $(STAGING)}'
 
-check: ## Verify redirect, HTTPS and certificate issuer
+check: ## Verify DNS, redirect, HTTPS and certificate issuer
+	@echo "--- dns      -> $$(dig +short $(DOMAIN) @$(ZONE_NS)) (expected $(IP))"
 	@echo "--- certificate"
-	@echo | openssl s_client -connect $(DOMAIN):443 -servername $(DOMAIN) 2>/dev/null | openssl x509 -noout -issuer -enddate
-	@echo "--- http://  -> $$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://$(DOMAIN)/)"
-	@echo "--- https:// -> $$($(CURL) -w '%{http_code}' https://$(DOMAIN)/)"
-	@echo "--- api      -> $$($(CURL) -w '%{http_code}' https://$(DOMAIN)/api/v1/)"
+	@echo | openssl s_client -connect $(IP):443 -servername $(DOMAIN) 2>/dev/null | openssl x509 -noout -issuer -enddate
+	@echo "--- http://  -> $$(curl -s $(RESOLVE) -o /dev/null -w '%{http_code} %{redirect_url}' http://$(DOMAIN)/)"
+	@echo "--- https:// -> $$($(CURL) $(RESOLVE) -w '%{http_code}' https://$(DOMAIN)/)"
+	@echo "--- api      -> $$($(CURL) $(RESOLVE) -w '%{http_code}' https://$(DOMAIN)/api/v1/)"
+	@echo "--- static   -> $$($(CURL) $(RESOLVE) -w '%{http_code}' https://$(DOMAIN)/static/admin/css/base.css)"
 
 down: ## Destroy the ephemeral stack (bootstrap stays)
 	$(TF) destroy -auto-approve -input=false
