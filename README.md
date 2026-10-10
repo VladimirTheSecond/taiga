@@ -264,7 +264,9 @@ The monthly AWS budget is 23 USD (~20 EUR) with e-mail alerts at 80 % and 100 %.
 ## Roadmap
 
 1. ~~One-command deploy with HTTPS on the real domain, S3 state, budget alert~~
-2. Data persistence: `pg_dump` + media → S3 before `down`, restore after `up`
+2. Data persistence: `pg_dump` + media → S3 before `down`, restore after `up`, daily backup while the instance runs
 3. CI: GitHub Actions with `terraform fmt/validate`, `tflint`, `ansible-lint`
 4. Monitoring: Prometheus + Grafana + `node_exporter` + `postgres_exporter`
 5. Migration from Docker Compose to k3s
+
+Backlog: automated backup testing (integrity checks, restore into a throwaway container, restore drill with RTO measurement).

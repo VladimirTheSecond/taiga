@@ -40,14 +40,17 @@ Self-hosted [Taiga](https://www.taiga.io/) Kanban on AWS, built with Terraform a
 - `ansible-playbook --syntax-check` does not load files from `include_tasks`; parse YAML files separately when checking.
 
 ## Plans
-Last session plan: [`docs/plans/2026-10-10-session.md`](docs/plans/2026-10-10-session.md) (milestone 1, done). Next session: milestone 2, no plan written yet.
+Last session plan: [`docs/plans/2026-10-10-session.md`](docs/plans/2026-10-10-session.md) (milestone 1, done). Next session plan (draft): [`docs/plans/milestone-2-backups.md`](docs/plans/milestone-2-backups.md).
 
 Roadmap:
 1. ~~One-command deploy with HTTPS on the real domain, S3 state, budget alert.~~ Done 2026-10-10.
-2. Data persistence: `pg_dump` + media → S3 before `down`, restore after `up`.
+2. Data persistence: `pg_dump` + media → S3 before `down`, restore after `up`, plus a daily backup while the instance runs.
 3. CI: GitHub Actions with `terraform fmt/validate`, `tflint`, `ansible-lint`.
 4. Monitoring: Prometheus + Grafana + `node_exporter` + `postgres_exporter`.
 5. Migration from Docker Compose to k3s.
+
+Backlog:
+- Backup testing: integrity check after every backup, automated restore into a throwaway Postgres container, full restore drill with RTO measurement, alert when daily backups stop.
 
 ## Interview notes
 The owner keeps the decision log, metrics and STAR drafts in a separate Obsidian vault (`/Users/vladimirulasovets/obsidian/DevOps/Taiga/Taiga.md`). At the end of a session, when that directory is available, add new decisions (decision, alternatives, why) and measured metrics there. That vault has its own language rules: write `DevOps/Taiga/` notes in English.
