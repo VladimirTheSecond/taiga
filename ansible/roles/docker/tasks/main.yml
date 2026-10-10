@@ -59,6 +59,10 @@
   ansible.builtin.apt:
     name: "{{ docker_packages }}"
     state: present
+    # deb822_repository (unlike apt_repository) does not refresh the apt cache, so the new repo
+    # is invisible until we do. Unconditional on purpose: a run that failed right after adding
+    # the repo would leave it "unchanged" on the next run and still unrefreshed.
+    update_cache: true
 
 - name: Configure Docker daemon
   ansible.builtin.template:
