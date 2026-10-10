@@ -12,16 +12,40 @@ upstream taiga-events {
     server 127.0.0.1:8888;
 }
 
+upstream taiga-protected {
+    server 127.0.0.1:8003;
+}
+
 {% macro taiga_locations() %}
     client_max_body_size 100M;
 
-    # Static and media files are served by taiga-back
-    location /media/ {
-        proxy_pass http://taiga-back;
+    # Django static files (admin, e-mail images), collected into a host directory
+    location /static/ {
+        alias {{ taiga_install_dir }}/static/;
     }
 
-    location /static/ {
-        proxy_pass http://taiga-back;
+    # Media: taiga-protected checks the signed token and answers with
+    # X-Accel-Redirect: /_protected/<path>; Nginx then serves the file itself.
+    location /media/ {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://taiga-protected/;  # trailing slash strips /media/
+        proxy_redirect off;
+    }
+
+    # Only reachable through X-Accel-Redirect, never directly from a client
+    location /_protected/ {
+        internal;
+        alias {{ taiga_install_dir }}/media/;
+        add_header Content-Disposition "attachment";
+    }
+
+    # Project exports are downloaded by a random, unguessable URL (upstream design)
+    location /media/exports/ {
+        alias {{ taiga_install_dir }}/media/exports/;
+        add_header Content-Disposition "attachment";
     }
 
     # API and admin go to the backend

@@ -9,6 +9,18 @@
     group: "{{ admin_user }}"
     mode: "0755"
 
+# Owned by uid 999 = user "taiga" inside the taiga-back image (its entrypoint chowns them anyway).
+- name: Create media and static directories
+  ansible.builtin.file:
+    path: "{{ taiga_install_dir }}/{{ item }}"
+    state: directory
+    owner: "999"
+    group: "999"
+    mode: "0755"
+  loop:
+    - media
+    - static
+
 - name: Render docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2
@@ -61,6 +73,18 @@
   delay: 10
   until: taiga_health.status in [200, 401, 403]
   changed_when: false
+
+# The bind mount hides the static files baked into the image, so collect them into it.
+- name: Collect Django static files
+  community.docker.docker_compose_v2_exec:
+    project_src: "{{ taiga_install_dir }}"
+    service: taiga-back
+    user: taiga
+    command: python manage.py collectstatic --noinput
+  become: true
+  become_user: "{{ admin_user }}"
+  register: taiga_collectstatic
+  changed_when: "not taiga_collectstatic.stdout is search('^0 static files copied', multiline=True)"
 
 # One idempotent task instead of "check, then createsuperuser":
 # - the password goes through stdin, not `--env` (docker_compose_v2_exec turns env into

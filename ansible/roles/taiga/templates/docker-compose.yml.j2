@@ -18,6 +18,13 @@ x-environment: &default-environment
   RABBITMQ_USER: "taiga"
   RABBITMQ_PASS: "{{ taiga_db_password }}"
 
+# Media and static files live on the host, not inside the container:
+# - host Nginx serves them directly (static) or after taiga-protected checks the token (media);
+# - uploads survive container recreation, and one directory is easy to back up.
+x-volumes: &taiga-back-volumes
+  - {{ taiga_install_dir }}/static:/taiga-back/static
+  - {{ taiga_install_dir }}/media:/taiga-back/media
+
 services:
   taiga-db:
     image: postgres:14
@@ -35,6 +42,7 @@ services:
     image: taigaio/taiga-back:{{ taiga_version }}
     environment:
       <<: *default-environment
+    volumes: *taiga-back-volumes
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -48,6 +56,7 @@ services:
     entrypoint: ["/taiga-back/docker/async_entrypoint.sh"]
     environment:
       <<: *default-environment
+    volumes: *taiga-back-volumes
     depends_on:
       - taiga-db
       - taiga-async-rabbitmq
