@@ -14,6 +14,9 @@ x-environment: &default-environment
   POSTGRES_USER: "{{ taiga_db_user }}"
   POSTGRES_PASSWORD: "{{ taiga_db_password }}"
   DATABASE_URL: "postgres://{{ taiga_db_user }}:{{ taiga_db_password }}@taiga-db:5432/{{ taiga_db_name }}"
+  # taiga-back builds the Celery and events broker URLs from these; without them it logs in as "None"
+  RABBITMQ_USER: "taiga"
+  RABBITMQ_PASS: "{{ taiga_db_password }}"
 
 services:
   taiga-db:
