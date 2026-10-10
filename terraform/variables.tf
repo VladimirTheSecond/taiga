@@ -23,7 +23,7 @@ variable "ssh_public_key_path" {
 }
 
 variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed to SSH into the instance"
+  description = "CIDR block allowed to SSH into the instance. Empty = current public IP of the machine running Terraform (/32)"
   type        = string
-  default     = "0.0.0.0/0" # Will change this later, so far any IP address is able to connect to our new instance
+  default     = ""
 }

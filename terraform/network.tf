@@ -58,11 +58,11 @@ resource "aws_security_group" "server" {
 
   # SSH
   ingress {
-    description = "SSH from anywhere (temporary)"
+    description = "SSH from the operator IP only"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
+    cidr_blocks = [local.ssh_cidr]
   }
 
   # HTTP
