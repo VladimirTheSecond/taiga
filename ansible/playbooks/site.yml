@@ -4,6 +4,24 @@
 - name: Configure Taiga server
   hosts: taiga
   become: true
+  # Facts need SSH, and right after `terraform apply` the instance is still booting.
+  gather_facts: false
+
+  pre_tasks:
+    - name: Wait until SSH is reachable
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 300
+
+    # cloud-init runs apt on first boot; starting our apt tasks earlier fails on the dpkg lock.
+    - name: Wait for cloud-init to finish
+      ansible.builtin.wait_for:
+        path: /var/lib/cloud/instance/boot-finished
+        timeout: 600
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
   roles:
     - common
     - docker
