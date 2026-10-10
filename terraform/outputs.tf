@@ -8,6 +8,11 @@ output "ssh_command" {
   value       = "ssh ubuntu@${aws_eip.taiga.public_ip}"
 }
 
+output "taiga_url" {
+  description = "Public URL of Taiga"
+  value       = "https://${local.taiga_fqdn}"
+}
+
 output "ssh_allowed_cidr" {
   description = "CIDR that is allowed to SSH into the instance"
   value       = local.ssh_cidr

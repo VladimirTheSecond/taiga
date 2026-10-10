@@ -27,3 +27,15 @@ variable "allowed_ssh_cidr" {
   type        = string
   default     = ""
 }
+
+variable "domain_name" {
+  description = "Apex domain of the Route 53 hosted zone (managed in terraform/bootstrap/)"
+  type        = string
+  default     = "vladimirulasovets.de"
+}
+
+variable "taiga_subdomain" {
+  description = "Subdomain for Taiga; the app is served at <taiga_subdomain>.<domain_name>"
+  type        = string
+  default     = "taiga"
+}
