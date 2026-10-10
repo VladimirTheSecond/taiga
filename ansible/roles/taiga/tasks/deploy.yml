@@ -61,3 +61,34 @@
   delay: 10
   until: taiga_health.status in [200, 401, 403]
   changed_when: false
+
+# One idempotent task instead of "check, then createsuperuser":
+# - the password goes through stdin, not `--env` (docker_compose_v2_exec turns env into
+#   `docker compose exec --env NAME=value`, visible in the host process list);
+# - createsuperuser exited non-zero even after creating the user, so its rc was useless.
+# to_json renders a safely quoted string literal that is also valid Python.
+- name: Ensure the Taiga admin user exists
+  community.docker.docker_compose_v2_exec:
+    project_src: "{{ taiga_install_dir }}"
+    service: taiga-back
+    command: python manage.py shell
+    tty: false
+    stdin: |
+      from django.contrib.auth import get_user_model
+      User = get_user_model()
+      if User.objects.filter(username={{ taiga_admin_username | to_json }}).exists():
+          print("admin: exists")
+      else:
+          User.objects.create_superuser(
+              username={{ taiga_admin_username | to_json }},
+              email={{ taiga_admin_email | to_json }},
+              password={{ taiga_admin_password | to_json }},
+          )
+          print("admin: created")
+  become: true
+  become_user: "{{ admin_user }}"
+  register: taiga_admin
+  changed_when: "'admin: created' in taiga_admin.stdout"
+  failed_when: taiga_admin.rc != 0 or 'admin: ' not in taiga_admin.stdout
+  no_log: true
+  when: taiga_create_admin
