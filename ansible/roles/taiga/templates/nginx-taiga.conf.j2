@@ -1,3 +1,5 @@
+# Managed by Ansible — do not edit manually
+
 upstream taiga-back {
     server 127.0.0.1:8000;
 }
@@ -10,10 +12,7 @@ upstream taiga-events {
     server 127.0.0.1:8888;
 }
 
-server {
-    listen 80;
-    server_name {{ taiga_domain }};
-
+{% macro taiga_locations() %}
     client_max_body_size 100M;
 
     # Static and media files are served by taiga-back
@@ -55,4 +54,45 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+{% endmacro %}
+{% if not enable_ssl %}
+server {
+    listen 80;
+    server_name {{ taiga_domain }};
+{{ taiga_locations() }}
 }
+{% else %}
+server {
+    listen 80;
+    server_name {{ taiga_domain }};
+
+    # ACME HTTP-01 challenge, also used by automatic renewals
+    location /.well-known/acme-challenge/ {
+        root {{ letsencrypt_webroot }};
+    }
+
+    location / {
+{% if taiga_ssl_ready | bool %}
+        return 301 https://$host$request_uri;
+{% else %}
+        # No certificate yet: only the challenge is served until certbot has run
+        return 503;
+{% endif %}
+    }
+}
+{% if taiga_ssl_ready | bool %}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name {{ taiga_domain }};
+
+    ssl_certificate     /etc/letsencrypt/live/{{ taiga_domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ taiga_domain }}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+{{ taiga_locations() }}
+}
+{% endif %}
+{% endif %}

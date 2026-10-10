@@ -19,3 +19,5 @@ taiga_create_admin: true
 
 # SSL
 enable_ssl: false
+letsencrypt_staging: true
+letsencrypt_webroot: /var/www/certbot

@@ -1,32 +1,27 @@
 ---
-# Configure Nginx as reverse proxy for Taiga
+# Configure Nginx as reverse proxy for Taiga, TLS via Let's Encrypt
+#
+# Certbot runs in `certonly --webroot` mode instead of `--nginx`: with --nginx, certbot edits
+# the site config, and the next Ansible run overwrites those edits and breaks HTTPS.
+# With webroot, Ansible owns the whole Nginx config and certbot only fetches the certificate.
 
 - name: Install Nginx
   ansible.builtin.apt:
     name: nginx
     state: present
 
-- name: Install Certbot and Nginx plugin (if SSL enabled)
+- name: Install Certbot (if SSL enabled)
   ansible.builtin.apt:
-    name:
-      - certbot
-      - python3-certbot-nginx
+    name: certbot
     state: present
   when: enable_ssl
 
-- name: Render Nginx site config
-  ansible.builtin.template:
-    src: nginx-taiga.conf.j2
-    dest: /etc/nginx/sites-available/taiga
-    mode: "0644"
-  notify: Reload nginx
-
-- name: Enable Taiga site
+- name: Create ACME challenge webroot
   ansible.builtin.file:
-    src: /etc/nginx/sites-available/taiga
-    dest: /etc/nginx/sites-enabled/taiga
-    state: link
-  notify: Reload nginx
+    path: "{{ letsencrypt_webroot }}"
+    state: directory
+    mode: "0755"
+  when: enable_ssl
 
 - name: Remove default Nginx site
   ansible.builtin.file:
@@ -40,13 +35,24 @@
     state: started
     enabled: true
 
+# First pass: HTTP only (on a fresh server there is no certificate yet)
+- name: Render HTTP site
+  ansible.builtin.include_tasks: nginx_site.yml
+
+# The deploy hook reloads Nginx after automatic renewals by the certbot systemd timer.
 - name: Obtain Let's Encrypt certificate
   ansible.builtin.command: >-
-    certbot --nginx -d {{ taiga_domain }}
+    certbot certonly --webroot -w {{ letsencrypt_webroot }}
+    -d {{ taiga_domain }}
     --non-interactive --agree-tos
     --email {{ letsencrypt_email }}
-    --redirect
+    --deploy-hook "systemctl reload nginx"
+    {{ '--staging' if letsencrypt_staging | bool else '' }}
   args:
     creates: /etc/letsencrypt/live/{{ taiga_domain }}/fullchain.pem
   when: enable_ssl
-  notify: Reload nginx
+
+# Second pass: now with the HTTPS server block and the HTTP -> HTTPS redirect
+- name: Render HTTPS site
+  ansible.builtin.include_tasks: nginx_site.yml
+  when: enable_ssl

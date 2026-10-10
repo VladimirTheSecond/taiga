@@ -1,0 +1,28 @@
+---
+# Render the Nginx site. The HTTPS server block is added only once the certificate exists,
+# otherwise Nginx refuses to start because the ssl_certificate file is missing.
+
+- name: Check whether the TLS certificate exists
+  ansible.builtin.stat:
+    path: /etc/letsencrypt/live/{{ taiga_domain }}/fullchain.pem
+  register: taiga_cert
+
+- name: Render Nginx site config
+  ansible.builtin.template:
+    src: nginx-taiga.conf.j2
+    dest: /etc/nginx/sites-available/taiga
+    mode: "0644"
+  vars:
+    taiga_ssl_ready: "{{ enable_ssl and taiga_cert.stat.exists }}"
+  notify: Reload nginx
+
+- name: Enable Taiga site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/taiga
+    dest: /etc/nginx/sites-enabled/taiga
+    state: link
+  notify: Reload nginx
+
+# certbot needs the challenge location live, so reload before it runs, not at the end of the play
+- name: Apply Nginx changes now
+  ansible.builtin.meta: flush_handlers
